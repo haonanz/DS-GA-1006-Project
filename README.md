@@ -1,5 +1,6 @@
 # DS-GA-1006-Project
 
-## Capstone Project for Data Science MS
+## Capstone Project for NYU Data Science M.S.
 ##Authors: Benjamin Jakubowski and Haonan Zhu
+
 
