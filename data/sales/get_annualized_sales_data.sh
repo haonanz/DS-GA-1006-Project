@@ -14,10 +14,10 @@ done
 file="all_residential_2011_2015.csv"
 
 if [ -f $file ] ; then
-  trash $file
+  rm $file
 fi
 
 
 python make_residential_csv.py
 
-trash *.xls
+rm *.xls

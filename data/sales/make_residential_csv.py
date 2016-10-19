@@ -17,6 +17,6 @@ for df in dfs[1:]:
 
 # Note tax class 1 and 2 includes residential properties
 # https://www1.nyc.gov/site/finance/taxes/definitions-of-property-assessment-terms.page
-residential = merged.loc[merged['TAX CLASS AT PRESENT'].isin([1,2,'1','2', '2A','2C','1A','1B','2B','1C','1D'])]
+residential = merged.loc[merged['TAX CLASS AT TIME OF SALE'].isin([1,2,'1','2', '2A','2C','1A','1B','2B','1C','1D'])]
 
 residential.to_csv('all_residential_2011_2015.csv', index=False)

@@ -76,4 +76,4 @@ print 'Successsful merge of %.2f percent of the sales data with Pluto...' % ((1.
 
 print 'Saving final merged csv file...'
 
-merged.to_csv('merged_sales_pluto_data.csv', index_col=False)
+merged.to_csv('merged_sales_pluto_data.csv', index=False)
