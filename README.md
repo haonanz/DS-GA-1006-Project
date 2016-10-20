@@ -3,4 +3,6 @@
 ## Capstone Project for NYU Data Science M.S.
 ## Authors: Benjamin Jakubowski and Haonan Zhou
 
+### Objective: Identify real estate comps for NYC properties
+
 
