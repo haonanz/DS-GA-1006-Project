@@ -1,0 +1,39 @@
+# Stats dumped from scrapy run.
+
+Last seen sale http request: 1233614
+
+INFO: Dumping Scrapy stats:
+{'downloader/exception_count': 159,
+ 'downloader/exception_type_count/twisted.internet.error.TimeoutError': 1,
+ 'downloader/exception_type_count/twisted.web._newclient.ResponseFailed': 26,
+ 'downloader/exception_type_count/twisted.web._newclient.ResponseNeverReceived': 132,
+ 'downloader/request_bytes': 388255694,
+ 'downloader/request_count': 1340290,
+ 'downloader/request_method_count/GET': 1340290,
+ 'downloader/response_bytes': 21937037998,
+ 'downloader/response_count': 1340131,
+ 'downloader/response_status_count/200': 495061,
+ 'downloader/response_status_count/301': 114140,
+ 'downloader/response_status_count/403': 10423,
+ 'downloader/response_status_count/404': 720178,
+ 'downloader/response_status_count/500': 228,
+ 'downloader/response_status_count/502': 23,
+ 'downloader/response_status_count/503': 55,
+ 'downloader/response_status_count/504': 23,
+ 'dupefilter/filtered': 170,
+ 'finish_reason': 'shutdown',
+ 'finish_time': datetime.datetime(2016, 11, 8, 23, 37, 20, 602992),
+ 'log_count/DEBUG': 2566103,
+ 'log_count/ERROR': 3,
+ 'log_count/INFO': 5901,
+ 'log_count/WARNING': 1,
+ 'response_received_count': 1225737,
+ 'scheduler/dequeued': 1340289,
+ 'scheduler/dequeued/memory': 1340289,
+ 'scheduler/enqueued': 1340291,
+ 'scheduler/enqueued/memory': 1340291,
+ 'start_time': datetime.datetime(2016, 11, 4, 21, 23, 35, 639098)}
+2016-11-08 18:37:20 [scrapy] INFO: Spider closed (shutdown)
+
+Number of html sites save: 491581
+Overwritten: 495061 - 491581 (200 responses status - number of files)
