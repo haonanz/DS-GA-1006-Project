@@ -1,7 +1,7 @@
 # DS-GA-1006-Project
 
-## Capstone Project for NYU Data Science M.S.
-## Authors: Benjamin Jakubowski and Haonan Zhou
+### Capstone Project for NYU Data Science M.S.
+### Authors: Benjamin Jakubowski and Haonan Zhou
 
 ### Project Objective: In this project, we aim to develop a model to:
 1. Predict the sale price of residential properties in NYC
