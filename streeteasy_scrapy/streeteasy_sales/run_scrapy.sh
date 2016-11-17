@@ -37,7 +37,11 @@ echo -e '\n'
 #Run scraper
 
 echo -e 'Running scrapy scraper...\n'
-scrapy crawl streeteasy
+
+osascript -e 'tell application "Terminal" to do script "cd other/ms_courses/capstone/DS-GA-1006-Project/streeteasy_scrapy/streeteasy_sales; scrapy crawl streeteasy -s JOBDIR=crawls/streeteasy-1"'
+
 else
 echo -e 'Sorry. You are not using Tor- not scraping streeteasy.'
 fi
+
+

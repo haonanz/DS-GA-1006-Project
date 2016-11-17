@@ -17,6 +17,7 @@ This repo contains scripts (primarily python and bash), plus exploratory ipython
 
 ### Next steps:
 To complete the project, we intend to:
+
 1. Parse the scraped html pages and generate features (including low-dimensional representations of raw text descriptions of properties).
 2. Use regression models (linear and non-linear, i.e. random forests and boosted models) to predict sale price
 3. Use features and predicted sale price to identify comps for input properties.
