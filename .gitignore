@@ -1,6 +1,7 @@
 *.ipynb_checkpoints
 *.csv
 *.html
+!modeling/*.html
 *.zip
 *.gz
 *.p
