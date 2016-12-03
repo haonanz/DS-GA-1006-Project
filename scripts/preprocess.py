@@ -182,6 +182,37 @@ assert(np.all(df1.columns == df4.columns))
 df = df1.append(df2).append(df3).append(df4).join(lda)
 df = df[~df.index.duplicated()]
 
+# load the test saleids; we are done dropping rows at this point
+test_id_set = set()
+with gzip.open(os.path.join(data_dir, 'test_saleids.txt.gz'), 'r') as fout:
+	for line in fout:
+		test_id_set.add(line.strip())
+
+train_id_set = set()
+with gzip.open(os.path.join(data_dir, 'train_saleids.txt.gz'), 'r') as fout:
+	for line in fout:
+		train_id_set.add(line.strip())
+
+# get train and test ids
+train_test_intersection = train_id_set.intersection(test_id_set)
+# assert not train_test_intersection, 'Test and Train saleid lists are not disjoint!'
+
+test_ids = []
+train_ids = []
+for saleid in df.index:
+	if saleid in train_test_intersection:
+		continue
+	elif saleid in test_id_set:
+		test_ids.append(saleid)
+	elif saleid in train_id_set:
+		train_ids.append(saleid)
+
+# remove all data outside of the train and test set
+df = df.ix[test_ids + train_ids]
+
+print 'found %d out of %d keys in data frame for training' % (len(train_ids), len(train_id_set))
+print 'found %d out of %d keys in data frame for testing' % (len(test_ids), len(test_id_set))
+
 # transform features
 transform_features(df)
 
@@ -206,30 +237,6 @@ for col_name in MULTICATEGORICAL_FEATURE:
 # check for NaN in the processed data frame
 for col_name in processed_feature:
 	assert np.any(pd.isnull(df[col_name])) == False, 'Column {} still has NaN entries!'.format(col_name)
-
-# load the test saleids; we are done dropping rows at this point
-test_id_set = set()
-with gzip.open(os.path.join(data_dir, 'test_saleids.txt.gz'), 'r') as fout:
-	for line in fout:
-		test_id_set.add(line.strip())
-
-train_id_set = set()
-with gzip.open(os.path.join(data_dir, 'train_saleids.txt.gz'), 'r') as fout:
-	for line in fout:
-		train_id_set.add(line.strip())
-
-train_test_intersection = train_id_set.intersection(test_id_set)
-# assert not train_test_intersection, 'Test and Train saleid lists are not disjoint!'
-
-test_ids = []
-train_ids = []
-for saleid in df.index:
-	if saleid in train_test_intersection:
-		continue
-	elif saleid in test_id_set:
-		test_ids.append(saleid)
-	else:
-		train_ids.append(saleid)
 
 # write train and data to a csv file
 df.ix[train_ids].to_csv(os.path.join(data_dir, 'features.train.csv.gz'), compression='gzip', columns=processed_feature)
