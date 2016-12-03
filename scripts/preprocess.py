@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import gzip
 
 
 NUMERICAL_FEATURE = ['price', 'num_sqft', 'monthly_cost', 'building_num_units',
@@ -208,18 +209,28 @@ for col_name in processed_feature:
 
 # load the test saleids; we are done dropping rows at this point
 test_id_set = set()
-with open(os.path.join(data_dir, 'test_saleids.txt.gz'), 'r') as fout:
+with gzip.open(os.path.join(data_dir, 'test_saleids.txt.gz'), 'r') as fout:
 	for line in fout:
 		test_id_set.add(line.strip())
+
+train_id_set = set()
+with gzip.open(os.path.join(data_dir, 'train_saleids.txt.gz'), 'r') as fout:
+	for line in fout:
+		train_id_set.add(line.strip())
+
+train_test_intersection = train_id_set.intersection(test_id_set)
+# assert not train_test_intersection, 'Test and Train saleid lists are not disjoint!'
 
 test_ids = []
 train_ids = []
 for saleid in df.index:
-	if saleid in test_id_set:
+	if saleid in train_test_intersection:
+		continue
+	elif saleid in test_id_set:
 		test_ids.append(saleid)
 	else:
 		train_ids.append(saleid)
 
 # write train and data to a csv file
-df.ix[train_ids].to_csv('features.train.csv.gz', compression='gzip', columns=processed_feature)
-df.ix[ test_ids].to_csv('features.test.csv.gz' , compression='gzip', columns=processed_feature)
+df.ix[train_ids].to_csv(os.path.join(data_dir, 'features.train.csv.gz'), compression='gzip', columns=processed_feature)
+df.ix[ test_ids].to_csv(os.path.join(data_dir, 'features.test.csv.gz'), compression='gzip', columns=processed_feature)
