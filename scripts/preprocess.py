@@ -1,18 +1,29 @@
+from rtree import index
+from shapely.geometry import shape, Point
+import gzip
+import geojson
+import numpy as np
 import os
 import pandas as pd
-import numpy as np
-import gzip
 
 
 NUMERICAL_FEATURE = ['price', 'num_sqft', 'monthly_cost', 'building_num_units',
-					 'topic1', 'topic2', 'topic3', 'topic4', 'topic5'
+					 'topic1', 'topic2', 'topic3', 'topic4', 'topic5',
+					 'building_comp_num_sqft', 'building_comp_price',
+					 'neighborhood_comp_num_sqft', 'neighborhood_comp_price',
 					 ]
 
-CATEGORICAL_FEATURE = ['date', 'borough', 'status', 'type', 'built_date', 'num_sqft_heuristic',
-					   'num_beds', 'num_baths', 'neighborhood', 'school_district'
-					   ]
+CATEGORICAL_FEATURE = ['date', 'borough', 'status', 'type', 'built_date',
+					   'num_beds', 'num_baths', 'neighborhood', 'community_district' ]
 
 MULTICATEGORICAL_FEATURE = ['amenities_list', 'transit_list']
+
+
+def clean_string(string):
+	return '_'.join(string.encode('ascii', 'ignore').lower().replace('-', ' ').replace('/', ' ').replace(',', ' ').strip().split())
+
+def clean_number(number):
+	return number.replace(',', '').replace('$', '')
 
 
 # convert string to float, replace nan with mean, and add an indicator feature for missing data
@@ -57,6 +68,43 @@ def handleMultiCategoricalColumn(df, col_name, processed_feature):
 		processed_feature.append(dummy_col)
 		print "adding dummy column {} for multi-categorical feature".format(dummy_col)
 	print "omiting dummy column {} for multi-categorical feature".format(dummies.columns[-1])
+
+
+def createSpatialIndex(geojson_path, data_name, omit_list=[]):
+	index_data = []
+	spatial_index = index.Index()
+	with open(geojson_path, 'r') as geojson_obj:
+		geojson_obj = geojson.load(geojson_obj)
+		for feature in geojson_obj['features']:
+			data_value = clean_string(str(feature['properties'][data_name]))
+			if data_value not in omit_list:
+				geometry = shape(feature['geometry']).buffer(0.001)
+				spatial_index.insert(len(index_data), geometry.bounds)
+				index_data.append((data_value, geometry))
+	return spatial_index, index_data
+
+
+def getGeoDataFromLongLat(index, index_data, longitude, latitude):
+	point = Point(longitude, latitude)
+	candidates = index.intersection((point.x, point.y, point.x, point.y))
+	best_data = np.nan
+	best_distance = None
+	for candidate in candidates:
+		if index_data[candidate][1].contains(point):
+			distance = index_data[candidate][1].distance(point)
+			if not best_distance or distance < best_distance:
+				best_data = index_data[candidate][0]
+				best_distance = distance
+	return best_data
+
+def getGeoDataFromGPSString(index, index_data, gps_string):
+	tokens = gps_string.split()
+	assert len(tokens) == 2
+	data = getGeoDataFromLongLat(index, index_data, float(tokens[1]), float(tokens[0]))
+	if not pd.isnull(data):
+		return data
+	else:
+		return getGeoDataFromLongLat(index, index_data, float(tokens[0]), float(tokens[1]))
 
 
 def transform_features(df):
@@ -137,50 +185,91 @@ def transform_features(df):
 
 	df.transit_list = pd.Series(transit_list, index=saleid)
 
-	print 'transforming num_sqft'
+	print 'creating new features based on comps in building and neighborhood'
 
 	# figure out average sqft per building per bedroom type
 	saleid = []
-	num_sqft_list = []
-	num_sqft_heuristic_list = []
-	df.insert(df.columns.get_loc('num_sqft') + 1, 'num_sqft_raw', df.num_sqft)
-	df.insert(df.columns.get_loc('num_sqft') + 1, 'num_sqft_heuristic', np.zeros(len(df.index)))
-	grouping1 = df.num_sqft.groupby([df.num_beds, df.building_url]).mean()
-	grouping2 = df.num_sqft.groupby([df.num_beds, df.neighborhood]).mean()
+	bld_comp_sqft_list = []
+	nbh_comp_sqft_list = []
+	bld_comp_price_list = []
+	nbh_comp_price_list = []
+	bld_group_sum = df.groupby([df.num_beds, df.type, df.building_url]).sum()
+	bld_group_mean = df.groupby([df.num_beds, df.type, df.building_url]).mean()
+	bld_group_count = df.groupby([df.num_beds, df.type, df.building_url]).count()
+	nbh_group_sum = df.groupby([df.num_beds, df.type, df.neighborhood]).sum()
+	nbh_group_mean = df.groupby([df.num_beds, df.type, df.neighborhood]).mean()
+	nbh_group_count = df.groupby([df.num_beds, df.type, df.neighborhood]).count()
 	for index, row in df.iterrows():
-		heuristic = 0
-		entry = row.num_sqft
-		if pd.isnull(entry) and not (pd.isnull(row.num_beds) or pd.isnull(row.building_url)):
-			if not np.isnan(grouping1[row.num_beds, row.building_url]):
-				entry = grouping1[row.num_beds, row.building_url]
-				heuristic = 1
-		if pd.isnull(entry) and not (pd.isnull(row.num_beds) or pd.isnull(row.neighborhood)):
-			if not np.isnan(grouping2[row.num_beds, row.neighborhood]):
-				entry = grouping2[row.num_beds, row.neighborhood]
-				heuristic = 2
+		bld_group_sqft = np.nan
+		nbh_group_sqft = np.nan
+		bld_group_price = np.nan
+		nbh_group_price = np.nan
+
+		if not (pd.isnull(row.num_beds)  or pd.isnull(row.type) or pd.isnull(row.building_url)):
+			bld_group_sqft = bld_group_mean.num_sqft[row.num_beds, row.type, row.building_url]
+			bld_group_price_count = bld_group_count.price[row.num_beds, row.type, row.building_url]
+			if bld_group_price_count > 1:
+				bld_group_price = (bld_group_sum.price[row.num_beds, row.type, row.building_url] - row.price) / (bld_group_price_count - 1)
+
+		if not (pd.isnull(row.num_beds) or pd.isnull(row.type) or pd.isnull(row.neighborhood)):
+			nbh_group_sqft = nbh_group_mean.num_sqft[row.num_beds, row.type, row.neighborhood]
+			nbh_group_price_count = nbh_group_count.price[row.num_beds, row.type, row.neighborhood]
+			if nbh_group_price_count > 1:
+				nbh_group_price = (nbh_group_sum.price[row.num_beds, row.type, row.neighborhood] - row.price) / (nbh_group_price_count - 1)
+
 		saleid.append(index)
-		num_sqft_list.append(entry)
-		num_sqft_heuristic_list.append(heuristic)
+		bld_comp_sqft_list.append(bld_group_sqft)
+		nbh_comp_sqft_list.append(nbh_group_sqft)
+		bld_comp_price_list.append(bld_group_price)
+		nbh_comp_price_list.append(nbh_group_price)
 
-	df.num_sqft = pd.Series(num_sqft_list, index=saleid)
-	df.num_sqft_heuristic = pd.Series(num_sqft_heuristic_list, index=saleid)
+	df['building_comp_num_sqft'] = pd.Series(bld_comp_sqft_list, index=saleid)
+	df['building_comp_price'] = pd.Series(bld_comp_price_list, index=saleid)
+	df['neighborhood_comp_num_sqft'] = pd.Series(nbh_comp_sqft_list, index=saleid)
+	df['neighborhood_comp_price'] = pd.Series(nbh_comp_price_list, index=saleid)
 
 
-# read data frame, drop rows without GPS coordinate
+# read data frames and drop rows without GPS coordinate
+df = pd.DataFrame()
 data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data')
-df1 = pd.read_csv(os.path.join(data_dir, 'sales_listings.1.csv.gz'), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
-df2 = pd.read_csv(os.path.join(data_dir, 'sales_listings.2.csv.gz'), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
-df3 = pd.read_csv(os.path.join(data_dir, 'sales_listings.3.csv.gz'), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
-df4 = pd.read_csv(os.path.join(data_dir, 'sales_listings.4.csv.gz'), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
-lda = pd.read_csv(os.path.join(data_dir, 'lda_representation.csv.gz'), header=0, index_col=0)
+for file in os.listdir(data_dir):
+	if file.startswith('sales_listings') and file.endswith('csv.gz'):
+		new_df = pd.read_csv(os.path.join(data_dir, file), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
+		df = df.append(new_df) if df.size > 0 else new_df
+		assert(np.all(new_df.columns == df.columns))
+assert df.size > 0
 
-assert(np.all(df1.columns == df2.columns))
-assert(np.all(df1.columns == df3.columns))
-assert(np.all(df1.columns == df4.columns))
+# join with LDA csv file
+df = df.join(pd.read_csv(os.path.join(data_dir, 'lda_representation.csv.gz'), header=0, index_col=0))
 
-# append the dataframes and join with lda csv; drop duplicate row indices
-df = df1.append(df2).append(df3).append(df4).join(lda)
+# drop duplicate row indices
 df = df[~df.index.duplicated()]
+
+saleids = []
+boroughs = []
+neighborhoods = []
+communities = []
+borough_index, borough_data = createSpatialIndex(os.path.join(data_dir, 'nyc_boroughs.geojson'), 'borough')
+community_index, community_data = createSpatialIndex(os.path.join(data_dir, 'nyc_communities.geojson'), 'communityDistrict', omit_list=["164"])
+neigborhood_index, neighborhood_data = createSpatialIndex(os.path.join(data_dir, 'nyc_neighborhoods.geojson'), 'neighborhood', omit_list=["central_park"])
+for index, gps_coordinates in df.gps_coordinates.iteritems():
+	saleids.append(index)
+	boroughs.append(getGeoDataFromGPSString(borough_index, borough_data, gps_coordinates))
+	communities.append(getGeoDataFromGPSString(community_index, community_data, gps_coordinates))
+	neighborhoods.append(getGeoDataFromGPSString(neigborhood_index, neighborhood_data, gps_coordinates))
+	if pd.isnull(boroughs[-1]) or pd.isnull(communities[-1]) or pd.isnull(neighborhoods[-1]):
+		print 'cannot map GPS coordinates to NYC zone!', index, gps_coordinates, \
+				boroughs[-1], neighborhoods[-1], communities[-1], df.ix[index, 'url']
+	# if count % 10000 == 0:
+	# 	print count, index, gps_coordinates, df.ix[index, 'neighborhood'], \
+	# 			boroughs[-1], neighborhoods[-1], communities[-1], df.ix[index, 'url']
+
+df['borough'] = pd.Series(boroughs, index=saleids)
+df['neighborhood'] = pd.Series(neighborhoods, index=saleids)
+df['community_district'] = pd.Series(communities, index=saleids)
+
+# drop records with weird GPS coordinates
+df = df.dropna(subset=['borough', 'neighborhood', 'community_district'], axis=0)
 
 # load the test saleids; we are done dropping rows at this point
 test_id_set = set()

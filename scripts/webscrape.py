@@ -7,12 +7,6 @@ import string
 import urllib2
 
 
-def clean_string(string):
-	return '_'.join(string.encode('ascii', 'ignore').lower().replace('-', ' ').replace('/', ' ').replace(',', ' ').strip().split())
-
-def clean_number(number):
-	return number.replace(',', '').replace('$', '')
-
 PUNCTUATION_TO_SPACE = string.maketrans(string.punctuation, ' ' * len(string.punctuation))
 
 FIELDS = [ 'saleid', 'address', 'price', 'neighborhood', 'borough', 'status', 'date',
@@ -21,6 +15,13 @@ FIELDS = [ 'saleid', 'address', 'price', 'neighborhood', 'borough', 'status', 'd
 		   'building_name', 'built_date', 'building_num_units', 'building_url', 'description']
 
 NYC_BOROUGHS = map(lambda b: clean_string(b), ['Manhattan', 'Queens', 'Brooklyn', 'Staten Island', 'Bronx'])
+
+
+def clean_string(string):
+	return '_'.join(string.encode('ascii', 'ignore').lower().replace('-', ' ').replace('/', ' ').replace(',', ' ').strip().split())
+
+def clean_number(number):
+	return number.replace(',', '').replace('$', '')
 
 
 def parse_listings_html(html, data):
