@@ -5,3 +5,11 @@
 *.zip
 *.gz
 *.p
+
+#For R
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
