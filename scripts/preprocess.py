@@ -1,4 +1,3 @@
-
 from rtree import index
 from shapely.geometry import shape, Point
 import gzip
@@ -10,6 +9,7 @@ import pandas as pd
 
 NUMERICAL_FEATURE = ['price', 'num_sqft', 'monthly_cost', 'building_num_units',
 					 'topic1', 'topic2', 'topic3', 'topic4', 'topic5',
+					 'topic6', 'topic7', 'topic8', 'topic9', 'topic10',
 					 'building_comp_num_sqft', 'building_comp_price',
 					 'neighborhood_comp_num_sqft', 'neighborhood_comp_price',
 					 ]
@@ -25,7 +25,6 @@ def clean_string(string):
 
 def clean_number(number):
 	return number.replace(',', '').replace('$', '')
-
 
 # convert string to float, replace nan with mean, and add an indicator feature for missing data
 def handleNumericalColumn(df, col_name, processed_feature):
@@ -271,7 +270,6 @@ df['community_district'] = pd.Series(communities, index=saleids)
 
 # drop records with weird GPS coordinates
 df = df.dropna(subset=['borough', 'neighborhood', 'community_district'], axis=0)
-
 # load the test saleids; we are done dropping rows at this point
 test_id_set = set()
 with gzip.open(os.path.join(data_dir, 'test_saleids.txt.gz'), 'r') as fout:
