@@ -13,3 +13,6 @@
 
 # Session Data files
 .RData
+
+# Large nonlinear models
+*.model
