@@ -30,12 +30,25 @@ class Logger(object):
 def percentage_error(y_true, y_pred):
     return np.abs((y_true - y_pred) / y_true) * 100.0
 
+def RMSPE_loss(preds, dtrain):
+    #See https://www.kaggle.com/inpefess/rossmann-store-sales/xgboost-in-python-with-rmspe/run/81957
+    #Note he had a mistake in grad which is corrected here.
+    #He also used list comprehesions/ternary ifs...
+    labels = dtrain.get_label()
+    grad = np.where(labels != 0, (preds - labels)/(labels**2), 0)
+    hess = np.where(labels != 0, 1/(labels**2), 0)
+    return grad, hess
+
+def evalerror(preds, dtrain):
+    labels = dtrain.get_label()
+    return 'RMSPE', np.sqrt(np.average(np.where(labels != 0, (1 - preds/labels)**2, 0)))
+
 if __name__ == '__main__':
 
     if len(sys.argv) > 1:
         if sys.argv[1] == 'test':
-            num_boost_round = 10 #For final model
-            n_estimators = 4 #For max_depth grid search
+            num_boost_round = 3 #For final model
+            n_estimators = 2 #For max_depth grid search
             max_depths = [2,3,4,5]
     else:
         num_boost_round = 1000 #For final model
@@ -104,17 +117,18 @@ if __name__ == '__main__':
                         DMatrix_train,
                         n_estimators,
                         [(DMatrix_train,'Train'),(DMatrix_eval,'Validation')],
+                        obj = RMSPE_loss,
+                        feval = evalerror,
                         verbose_eval=True,
                         early_stopping_rounds=10,
                         )
 
         #Process results and save in DF
         eval_results = sys.stdout.log
-        eval_results = [x.strip() for x in eval_results if x.find('rmse:')>0]
+        eval_results = [x.strip() for x in eval_results if x.find('RMSPE:')>0]
         eval_results = [re.findall("\d+\.\d+", x) for x in eval_results]
-        #Square to remove root from RMSE- map RMSE -> MSE
-        train_results = [float(x[0])**2 for x in eval_results]
-        val_results = [float(x[1])**2 for x in eval_results]
+        train_results = [float(x[2]) for x in eval_results] #Note MSE prints
+        val_results = [float(x[3]) for x in eval_results] #Note MSE prints
         num_rounds_boosting = range(1,len(eval_results)+1)
 
         lc_df = {'max_depth':np.repeat(depth, len(num_rounds_boosting)),
@@ -139,7 +153,7 @@ if __name__ == '__main__':
     #--------------MAKE PLOTS AND SAVE STATS---------------#
     #------------------------------------------------------#
 
-    depth_all_results.to_csv('./saved_models/XGB_depth_learning_curve.csv', index=False)
+    depth_all_results.to_csv('./saved_models/XGB_model_2_depth_learning_curve.csv', index=False)
     colors = ['b','g','r','k']
     colors = dict(zip(max_depths, colors))
 
@@ -159,7 +173,7 @@ if __name__ == '__main__':
                  linestyle='solid',
                  color = colors[depth])
     plt.title('Learning tree depth')
-    plt.ylabel('Mean Squared Error')
+    plt.ylabel('Root Mean Squared Percentage Error')
     plt.xlabel('Number of Rounds of Boosting')
 
     # Shrink current axis by 20%
@@ -168,7 +182,7 @@ if __name__ == '__main__':
     # Put a legend to the right of the current axis
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5),frameon=True)
 
-    fig.savefig('./figs/XGB_depth_learning_lc.png')
+    fig.savefig('./figs/XGB_model_2_depth_learning_lc.png')
 
 
     #------------------------------------------------------#
@@ -177,9 +191,8 @@ if __name__ == '__main__':
 
     print 'Now learning number of rounds of boosting and learning rate using optimal tree depth...'
 
-    final_params = {'objective':'reg:linear',
-                    'silent':0}
-    final_params['max_depth'] = best_depth
+    final_params = {'silent':0,
+                    'max_depth':best_depth}
 
     #Start logging to save verbose_eval...
     stdout = sys.stdout
@@ -196,17 +209,18 @@ if __name__ == '__main__':
                         DMatrix_train,
                         num_boost_round,
                         [(DMatrix_train,'Train'),(DMatrix_eval,'Validation')],
+                        obj = RMSPE_loss,
+                        feval = evalerror,
                         verbose_eval=True,
                         early_stopping_rounds=10,
                         )
 
         #Process results and save in DF
         eval_results = sys.stdout.log
-        eval_results = [x.strip() for x in eval_results if x.find('rmse:')>0]
+        eval_results = [x.strip() for x in eval_results if x.find('RMSPE:')>0]
         eval_results = [re.findall("\d+\.\d+", x) for x in eval_results]
-        #Square to remove root from RMSE- map RMSE -> MSE
-        train_results = [float(x[0])**2 for x in eval_results]
-        val_results = [float(x[1])**2 for x in eval_results]
+        train_results = [float(x[2]) for x in eval_results] #Note MSE prints
+        val_results = [float(x[3]) for x in eval_results] #Note MSE prints
         num_rounds_boosting = range(1,len(eval_results)+1)
 
         lc_df = {'eta':np.repeat(eta, len(num_rounds_boosting)),
@@ -233,7 +247,7 @@ if __name__ == '__main__':
     #--------------MAKE PLOTS AND SAVE STATS---------------#
     #------------------------------------------------------#
 
-    all_results.to_csv('./saved_models/XGB_learning_curve.csv', index=False)
+    all_results.to_csv('./saved_models/XGB_model_2_learning_curve.csv', index=False)
     colors = ['b','g','r','k']
     colors = dict(zip(etas, colors))
     #Make learning curve
@@ -259,9 +273,9 @@ if __name__ == '__main__':
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5),frameon=True)
 
     plt.title('Learning number of rounds and learning rate')
-    plt.ylabel('Mean Squared Error')
+    plt.ylabel('Root Mean Squared Percentage Error')
     plt.xlabel('Number of Rounds of Boosting')
-    fig.savefig('./figs/XGB_num_round_eta_lc.png')
+    fig.savefig('./figs/XGB_model_2_num_round_eta_lc.png')
 
     #------------------------------------------------------#
     #------LEARN FINAL MODEL OVER ALL TRAINING DATA--------#
@@ -283,6 +297,8 @@ if __name__ == '__main__':
                     DMatrix_train_all,
                     best_etas_num_rounds,
                     [(DMatrix_train,'Train')],
+                    obj = RMSPE_loss,
+                    feval = evalerror,
                     verbose_eval=True,
                     )
 
@@ -300,11 +316,11 @@ if __name__ == '__main__':
 
     #Now make and save fig.
     importance.plot(kind='barh', x='feature', y='fscore', xlim=(0,1), legend=False)
-    plt.title('XGBoost Feature Importance')
+    plt.title('XGBoost RMSEPE Feature Importance')
     plt.xlabel('Relative importance (normalized gain score)')
     plt.ylabel('Feature')
     plt.tight_layout()
-    plt.savefig('./figs/XGB_feature_importance.png')
+    plt.savefig('./figs/XGB_model_2_feature_importance.png')
 
     #------------------------------------------------------#
     #--------------GET TEST SET RESULTS AND SAVE-----------#
@@ -314,7 +330,7 @@ if __name__ == '__main__':
     predicted_test = bst_final.predict(DMatrix_test, ntree_limit=bst_final.best_ntree_limit)
 
     metrics = [mean_squared_error, r2_score, mean_absolute_error, median_absolute_error]
-    with file('./saved_models/XGBoost_test_scores.txt','w') as test_output:
+    with file('./saved_models/XGB_model_2_test_scores.txt','w') as test_output:
         test_output.write('Test set scores:\n')
         for metric in metrics:
             metric_score = metric(y_test, predicted_test)
@@ -350,9 +366,9 @@ if __name__ == '__main__':
     plt.ylabel('Frequency (counts)')
     plt.legend()
     plt.xlim(0,200)
-    plt.savefig('./figs/XGB_perc_error_hist.png')
+    plt.savefig('./figs/XGB_model_2_perc_error_hist.png')
 
-    pd.DataFrame(predicted_test, index=y_test.index).to_csv('./saved_models/XGBoost_test_predictions.csv', index=True)
+    pd.DataFrame(predicted_test, index=y_test.index).to_csv('./saved_models/XGB_model_2_test_predictions.csv', index=True)
 
     print 'Saving final xgb model...'
-    bst_final.save_model('./saved_models/XGBoost_final_model.model')
+    bst_final.save_model('./saved_models/XGB_model_2_final_model.model')

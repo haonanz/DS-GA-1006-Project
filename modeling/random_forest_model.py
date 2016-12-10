@@ -16,7 +16,7 @@ def percentage_error(y_true, y_pred):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) > 0:
+    if len(sys.argv) > 1:
         if sys.argv[1] == 'test':
             params = {'n_estimators':[2, 4],
                       'max_depth':[4,8],
@@ -26,15 +26,15 @@ if __name__ == '__main__':
                       'verbose':[2],
                       'max_features':['auto', 'sqrt']
                       }
-        else:
-            params = {'n_estimators':[50, 100, 200, 400],
-                      'max_depth':[4,8],
-                      'criterion':['mse'],
-                      'oob_score':[True],
-                      'n_jobs':[-1],
-                      'verbose':[2],
-                      'max_features':['auto', 'sqrt']
-                      }
+    else:
+        params = {'n_estimators':[50, 100, 200, 400],
+                  'max_depth':[4,8],
+                  'criterion':['mse'],
+                  'oob_score':[True],
+                  'n_jobs':[-1],
+                  'verbose':[2],
+                  'max_features':['auto', 'sqrt']
+                  }
 
     #------------------------------------------------------#
     #------------------READ IN DATA------------------------#
