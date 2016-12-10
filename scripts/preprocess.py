@@ -230,13 +230,20 @@ def transform_features(df):
 
 
 # read data frames and drop rows without GPS coordinate
-df = pd.DataFrame()
+listings_files = []
 data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data')
 for file in os.listdir(data_dir):
 	if file.startswith('sales_listings') and file.endswith('csv.gz'):
-		new_df = pd.read_csv(os.path.join(data_dir, file), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
-		df = df.append(new_df) if df.size > 0 else new_df
-		assert(np.all(new_df.columns == df.columns))
+		listings_files.append(file)
+
+assert len(listings_files) > 0
+
+df = pd.DataFrame()
+for file in sorted(listings_files):
+	new_df = pd.read_csv(os.path.join(data_dir, file), header=0, index_col=0).dropna(subset=['gps_coordinates'], axis=0)
+	df = df.append(new_df) if df.size > 0 else new_df
+	assert(np.all(new_df.columns == df.columns))
+
 assert df.size > 0
 
 # join with LDA csv file
