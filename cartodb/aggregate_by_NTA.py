@@ -42,8 +42,8 @@ neigborhood_index, neighborhood_data = createSpatialIndex(os.path.join(data_dir,
 
 print 'Reading in data...'
 df = pd.read_csv('./data/cartodb.features.csv.gz',
-                    header = 0,
-                    index_col = 0,
+                    header=0,
+                    index_col=0,
                     compression='gzip')
 
 print 'Running neighborhood point in polygon test...'
@@ -53,7 +53,7 @@ print 'Grouping by neighborhood...'
 groupby_object = df.groupby('neighborhood')
 
 groupby_object = groupby_object.agg('median')\
-                               .rename(columns = lambda x: x + ' median')\
+                               .rename(columns=lambda x: x + ' median')\
                                .join(pd.DataFrame(groupby_object.size(),
                                                   columns=['counts']))
 
@@ -70,4 +70,4 @@ with open(os.path.join(data_dir, 'nyc_neighborhoods.geojson'), 'r') as geojson_o
                     print "Couldn't find feature for {}".format(index)
 
 with open(os.path.join(data_dir, 'nyc_neighborhoods_with_medians.geojson'), 'w') as outfile:
-    geojson.dump(geojson_obj, outfile)
+    geojson.dump(geojson_obj, outfile, sort_keys=True, indent=4)

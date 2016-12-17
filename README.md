@@ -14,11 +14,4 @@ This repo contains scripts (primarily python and bash), plus exploratory ipython
 - streeteasy: This directory contains scripts for scraping the current sales posted on streeteasy. This was the initial approach taken to scraping streeteasy data, but it only produced 10k sale records, and none had labels for final sale price (only asking price was available).
 - streeteasy_building: This directory contains an ipython notebook that explored scraping streeteasy sales by paging through buildings. This approach was not taken, but again the script was retained for reference.
 - streeteasy_scrapy: This directory contains the python and bash scripts necessary to scrape the streeteasy sales pages (assumed to be integers from 0 to approximately 1400000 based on previous work). This was the approach ultimately taken to getting sales data.
-
-### Next steps:
-To complete the project, we intend to:
-
-1. Parse the scraped html pages and generate features (including low-dimensional representations of raw text descriptions of properties).
-2. Use regression models (linear and non-linear, i.e. random forests and boosted models) to predict sale price
-3. Use features and predicted sale price to identify comps for input properties.
-
+- cartodb: This directory contains python scripts used for mapping using cartodb. The script used for the map in the final report was aggregate_by_nta.py, since we found pre-aggregating training set records was necessary (cartodb did not readily support online aggregation of 250k records).

@@ -1,0 +1,7 @@
+Test set scores:
+r2_score = 0.718068709829
+mean_squared_error = 0.173768268464
+mean_absolute_error = 0.246518469262
+mean_percentage_error = 28.1150989677
+median_absolute_error = 0.149701277101
+median_percentage_error = 20.0029561309

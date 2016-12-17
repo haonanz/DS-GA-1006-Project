@@ -1,5 +1,0 @@
-Test set scores:
-mean_squared_error = 0.0454762476067
-r2_score = 0.934401960986
-mean_absolute_error = 0.111391321802
-median_absolute_error = 0.0526577712529
