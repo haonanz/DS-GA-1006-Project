@@ -15,3 +15,5 @@ This repo contains scripts (primarily python and bash), plus exploratory ipython
 - streeteasy_building: This directory contains an ipython notebook that explored scraping streeteasy sales by paging through buildings. This approach was not taken, but again the script was retained for reference.
 - streeteasy_scrapy: This directory contains the python and bash scripts necessary to scrape the streeteasy sales pages (assumed to be integers from 0 to approximately 1400000 based on previous work). This was the approach ultimately taken to getting sales data.
 - cartodb: This directory contains python scripts used for mapping using cartodb. The script used for the map in the final report was aggregate_by_nta.py, since we found pre-aggregating training set records was necessary (cartodb did not readily support online aggregation of 250k records).
+- modeling: This directory contains python scripts for learning elastic-net regularized linear models (including models for sub-geographies), XGBoost models, and random forests. It also contains a subdirectory for LDA modeling of unit descriptions.
+
